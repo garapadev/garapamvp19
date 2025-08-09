@@ -296,3 +296,4 @@ Para suporte, envie um email para suporte@garapacrm.com ou abra uma issue no Git
 ---
 
 Desenvolvido com ❤️ usando Next.js, TypeScript e Clean Architecture pela equipe GarapaDev
+Desenvolvido com IA, tecnologicamente cearense para o mundo
