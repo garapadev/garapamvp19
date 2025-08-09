@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import { GlobalLoading } from "@/components/ui/GlobalLoading";
+import { RouteChangeLoadingHandler } from "@/components/RouteChangeLoadingHandler";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,21 +17,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "GarapaCRM - Sistema de Gestão",
+  description: "Sistema CRM completo com gestão de clientes, tarefas, helpdesk, WhatsApp e email",
+  keywords: ["CRM", "GarapaCRM", "gestão", "clientes", "tarefas", "helpdesk", "WhatsApp", "email"],
+  authors: [{ name: "GarapaCRM Team" }],
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "GarapaCRM",
+    description: "Sistema CRM completo com gestão de clientes, tarefas, helpdesk, WhatsApp e email",
+    url: "https://seu-dominio.com",
+    siteName: "GarapaCRM",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
+    title: "GarapaCRM",
+    description: "Sistema CRM completo com gestão de clientes, tarefas, helpdesk, WhatsApp e email",
   },
 };
 
@@ -40,13 +41,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <LoadingProvider>
           {children}
           <GlobalLoading />
+          <RouteChangeLoadingHandler />
         </LoadingProvider>
         <Toaster />
       </body>

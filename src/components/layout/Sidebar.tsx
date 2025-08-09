@@ -118,16 +118,19 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const { setLoading } = useLoading()
 
   const handleNavigation = (href: string) => {
+    // Se já estiver na mesma página, não faz nada
+    if (pathname === href) return
+    
     // Ativar loading
     setLoading(true)
     
     // Navegar para a nova página
     router.push(href)
     
-    // Desativar loading após um tempo (simulando o carregamento)
+    // Desativar loading após um tempo razoável para a navegação
     setTimeout(() => {
       setLoading(false)
-    }, 1000)
+    }, 1500)
   }
 
   const MenuItem = ({ item }: { item: any }) => {
