@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { RouterLoading } from "@/components/ui/RouterLoading";
 import { TenantProvider } from "@/lib/tenant-context";
+import { GlobalLoading } from "@/components/loading";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,7 +48,9 @@ export default function RootLayout({
       >
         <TenantProvider>
           <RouterLoading />
-          {children}
+          <Suspense fallback={<GlobalLoading />}>
+            {children}
+          </Suspense>
           <Toaster />
         </TenantProvider>
       </body>
