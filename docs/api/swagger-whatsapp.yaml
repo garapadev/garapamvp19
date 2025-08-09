@@ -1,0 +1,814 @@
+openapi: 3.0.3
+info:
+  title: Sistema CRM - API WhatsApp
+  description: API para integração com WhatsApp no Sistema CRM
+  version: 1.0.0
+  contact:
+    name: Suporte Técnico
+    email: suporte@seu-sistema.com
+
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor de desenvolvimento
+  - url: https://api.seu-sistema.com/api
+    description: Servidor de produção
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Conversas
+  /whatsapp/conversas:
+    get:
+      tags:
+        - WhatsApp - Conversas
+      summary: Listar conversas
+      description: Retorna uma lista paginada de conversas WhatsApp
+      parameters:
+        - name: page
+          in: query
+          description: Número da página
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Limite de registros por página
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: search
+          in: query
+          description: Termo de busca (nome ou telefone)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de conversas retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ConversaWhatsApp'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /whatsapp/conversas/{id}:
+    get:
+      tags:
+        - WhatsApp - Conversas
+      summary: Obter conversa
+      description: Retorna os detalhes de uma conversa específica com mensagens
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da conversa
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversa retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ConversaDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /whatsapp/conversas/telefone/{telefone}:
+    get:
+      tags:
+        - WhatsApp - Conversas
+      summary: Buscar conversa por telefone
+      description: Busca uma conversa pelo número de telefone
+      parameters:
+        - name: telefone
+          in: path
+          required: true
+          description: Número de telefone
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversa encontrada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ConversaWhatsApp'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Mensagens
+  /whatsapp/conversas/{id}/mensagens:
+    get:
+      tags:
+        - WhatsApp - Mensagens
+      summary: Listar mensagens
+      description: Retorna as mensagens de uma conversa específica
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da conversa
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Número da página
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Limite de registros por página
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Lista de mensagens retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MensagemWhatsApp'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - WhatsApp - Mensagens
+      summary: Enviar mensagem
+      description: Envia uma mensagem para uma conversa
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da conversa
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MensagemCreate'
+      responses:
+        '201':
+          description: Mensagem enviada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MensagemWhatsApp'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /whatsapp/mensagens/{id}/ler:
+    put:
+      tags:
+        - WhatsApp - Mensagens
+      summary: Marcar mensagem como lida
+      description: Marca uma mensagem específica como lida
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da mensagem
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mensagem marcada como lida com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Integração
+  /whatsapp/verificar-cliente/{telefone}:
+    get:
+      tags:
+        - WhatsApp - Integração
+      summary: Verificar cliente
+      description: Verifica se um número de telefone pertence a um cliente cadastrado
+      parameters:
+        - name: telefone
+          in: path
+          required: true
+          description: Número de telefone
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Verificação realizada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          existe:
+                            type: boolean
+                            description: Indica se o cliente existe
+                          cliente:
+                            $ref: '#/components/schemas/Cliente'
+                            description: Cliente encontrado (se existir)
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /whatsapp/conversas/{id}/criar-cliente:
+    post:
+      tags:
+        - WhatsApp - Integração
+      summary: Criar cliente
+      description: Cria um cliente a partir de uma conversa WhatsApp
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da conversa
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClienteCreate'
+      responses:
+        '201':
+          description: Cliente criado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Cliente'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /whatsapp/conversas/{id}/criar-tarefa:
+    post:
+      tags:
+        - WhatsApp - Integração
+      summary: Criar tarefa
+      description: Cria uma tarefa a partir de uma conversa WhatsApp
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da conversa
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TarefaCreate'
+      responses:
+        '201':
+          description: Tarefa criada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Tarefa'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /whatsapp/conversas/{id}/criar-chamado:
+    post:
+      tags:
+        - WhatsApp - Integração
+      summary: Criar chamado
+      description: Cria um chamado a partir de uma conversa WhatsApp
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da conversa
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChamadoCreate'
+      responses:
+        '201':
+          description: Chamado criado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Chamado'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indica se a operação foi bem sucedida
+        message:
+          type: string
+          description: Mensagem de resposta
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Página atual
+        limit:
+          type: integer
+          description: Limite de registros por página
+        total:
+          type: integer
+          description: Total de registros
+        pages:
+          type: integer
+          description: Total de páginas
+
+    ConversaWhatsApp:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único da conversa
+        telefone:
+          type: string
+          description: Número de telefone
+        nome:
+          type: string
+          description: Nome do contato
+        isGroup:
+          type: boolean
+          description: Indica se é um grupo
+        ultimoMensagem:
+          type: string
+          description: Última mensagem
+        dataUltimaMensagem:
+          type: string
+          format: date-time
+          description: Data da última mensagem
+        naoLidas:
+          type: integer
+          description: Quantidade de mensagens não lidas
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data de atualização
+        clienteId:
+          type: string
+          description: ID do cliente vinculado
+        cliente:
+          $ref: '#/components/schemas/Cliente'
+          description: Cliente vinculado
+
+    ConversaDetail:
+      allOf:
+        - $ref: '#/components/schemas/ConversaWhatsApp'
+        - type: object
+          properties:
+            mensagens:
+              type: array
+              items:
+                $ref: '#/components/schemas/MensagemWhatsApp'
+              description: Mensagens da conversa
+
+    MensagemWhatsApp:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único da mensagem
+        conversaId:
+          type: string
+          description: ID da conversa
+        conteudo:
+          type: string
+          description: Conteúdo da mensagem
+        tipo:
+          type: string
+          enum: [TEXT, IMAGE, VIDEO, AUDIO, DOCUMENT, STICKER, LOCATION, CONTACT]
+          description: Tipo da mensagem
+        remetente:
+          type: string
+          enum: [CONTATO, USUARIO]
+          description: Remetente da mensagem
+        lida:
+          type: boolean
+          description: Indica se a mensagem foi lida
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp da mensagem
+        mid:
+          type: string
+          description: Message ID do WhatsApp
+        anexo:
+          type: string
+          description: URL do anexo
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+
+    Cliente:
+      type: object
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        email:
+          type: string
+        telefone:
+          type: string
+
+    MensagemCreate:
+      type: object
+      required:
+        - conteudo
+      properties:
+        conteudo:
+          type: string
+          minLength: 1
+          description: Conteúdo da mensagem
+        tipo:
+          type: string
+          enum: [TEXT, IMAGE, VIDEO, AUDIO, DOCUMENT, STICKER, LOCATION, CONTACT]
+          default: TEXT
+          description: Tipo da mensagem
+        anexo:
+          type: string
+          description: URL do anexo
+
+    ClienteCreate:
+      type: object
+      required:
+        - nome
+      properties:
+        nome:
+          type: string
+          minLength: 3
+          description: Nome do cliente
+        email:
+          type: string
+          format: email
+          description: Email do cliente
+        telefone:
+          type: string
+          description: Telefone do cliente
+        cpfCnpj:
+          type: string
+          description: CPF ou CNPJ do cliente
+        endereco:
+          type: string
+          description: Endereço do cliente
+        cidade:
+          type: string
+          description: Cidade do cliente
+        estado:
+          type: string
+          description: Estado do cliente
+        cep:
+          type: string
+          description: CEP do cliente
+        segmento:
+          type: string
+          description: Segmento do cliente
+        observacoes:
+          type: string
+          description: Observações sobre o cliente
+
+    TarefaCreate:
+      type: object
+      required:
+        - titulo
+      properties:
+        titulo:
+          type: string
+          minLength: 5
+          description: Título da tarefa
+        descricao:
+          type: string
+          maxLength: 1000
+          description: Descrição da tarefa
+        status:
+          type: string
+          enum: [PENDENTE, EM_ANDAMENTO, CONCLUIDA, CANCELADA]
+          default: PENDENTE
+          description: Status inicial da tarefa
+        prioridade:
+          type: string
+          enum: [BAIXA, MEDIA, ALTA, URGENTE]
+          default: MEDIA
+          description: Prioridade da tarefa
+        dataVencimento:
+          type: string
+          format: date-time
+          description: Data de vencimento
+
+    Tarefa:
+      type: object
+      properties:
+        id:
+          type: string
+        titulo:
+          type: string
+        descricao:
+          type: string
+        status:
+          type: string
+        prioridade:
+          type: string
+        dataVencimento:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    ChamadoCreate:
+      type: object
+      required:
+        - titulo
+        - descricao
+        - departamentoId
+      properties:
+        titulo:
+          type: string
+          minLength: 5
+          description: Título do chamado
+        descricao:
+          type: string
+          minLength: 10
+          description: Descrição do chamado
+        status:
+          type: string
+          enum: [ABERTO, EM_ANDAMENTO, RESPONDIDO, RESOLVIDO, FECHADO, CANCELADO]
+          default: ABERTO
+          description: Status inicial do chamado
+        prioridade:
+          type: string
+          enum: [BAIXA, MEDIA, ALTA, URGENTE]
+          default: MEDIA
+          description: Prioridade do chamado
+        departamentoId:
+          type: string
+          description: ID do departamento responsável
+
+    Chamado:
+      type: object
+      properties:
+        id:
+          type: string
+        titulo:
+          type: string
+        descricao:
+          type: string
+        status:
+          type: string
+        prioridade:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+  responses:
+    UnauthorizedError:
+      description: Não autorizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: AUTHENTICATION_ERROR
+                  message:
+                    type: string
+                    example: Token inválido ou expirado
+
+    ValidationError:
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: VALIDATION_ERROR
+                  message:
+                    type: string
+                    example: Dados inválidos
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                          example: conteudo
+                        message:
+                          type: string
+                          example: Conteúdo não pode ser vazio
+
+    NotFoundError:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: NOT_FOUND
+                  message:
+                    type: string
+                    example: Conversa não encontrada
+
+    UnprocessableEntityError:
+      description: Entidade não processável
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: DUPLICATE_ENTRY
+                  message:
+                    type: string
+                    example: Cliente já cadastrado
+
+    ServerError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: INTERNAL_ERROR
+                  message:
+                    type: string
+                    example: Erro interno do servidor

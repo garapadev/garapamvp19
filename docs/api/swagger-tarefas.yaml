@@ -1,0 +1,606 @@
+openapi: 3.0.3
+info:
+  title: Sistema CRM - API de Tarefas
+  description: API para gerenciamento de tarefas no Sistema CRM
+  version: 1.0.0
+  contact:
+    name: Suporte Técnico
+    email: suporte@seu-sistema.com
+
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor de desenvolvimento
+  - url: https://api.seu-sistema.com/api
+    description: Servidor de produção
+
+security:
+  - BearerAuth: []
+
+paths:
+  /tarefas:
+    get:
+      tags:
+        - Tarefas
+      summary: Listar tarefas
+      description: Retorna uma lista paginada de tarefas com filtros opcionais
+      parameters:
+        - name: page
+          in: query
+          description: Número da página
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Limite de registros por página
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: status
+          in: query
+          description: Filtro por status
+          schema:
+            type: string
+            enum: [PENDENTE, EM_ANDAMENTO, CONCLUIDA, CANCELADA]
+        - name: prioridade
+          in: query
+          description: Filtro por prioridade
+          schema:
+            type: string
+            enum: [BAIXA, MEDIA, ALTA, URGENTE]
+        - name: clienteId
+          in: query
+          description: Filtro por cliente
+          schema:
+            type: string
+        - name: usuarioId
+          in: query
+          description: Filtro por usuário
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de tarefas retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Tarefa'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Tarefas
+      summary: Criar tarefa
+      description: Cria uma nova tarefa no sistema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TarefaCreate'
+      responses:
+        '201':
+          description: Tarefa criada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Tarefa'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /tarefas/{id}:
+    get:
+      tags:
+        - Tarefas
+      summary: Obter tarefa
+      description: Retorna os detalhes de uma tarefa específica
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da tarefa
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tarefa retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Tarefa'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags:
+        - Tarefas
+      summary: Atualizar tarefa
+      description: Atualiza os dados de uma tarefa existente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da tarefa
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TarefaUpdate'
+      responses:
+        '200':
+          description: Tarefa atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Tarefa'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags:
+        - Tarefas
+      summary: Excluir tarefa
+      description: Exclui uma tarefa do sistema
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da tarefa
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tarefa excluída com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /tarefas/{id}/status:
+    put:
+      tags:
+        - Tarefas
+      summary: Atualizar status
+      description: Atualiza o status de uma tarefa
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da tarefa
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [PENDENTE, EM_ANDAMENTO, CONCLUIDA, CANCELADA]
+                  description: Novo status da tarefa
+      responses:
+        '200':
+          description: Status atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Tarefa'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /tarefas/dashboard:
+    get:
+      tags:
+        - Tarefas
+      summary: Dashboard de tarefas
+      description: Retorna dados para o dashboard de tarefas
+      responses:
+        '200':
+          description: Dados do dashboard retornados com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                            description: Total de tarefas
+                          porStatus:
+                            type: object
+                            description: Quantidade por status
+                            properties:
+                              PENDENTE:
+                                type: integer
+                              EM_ANDAMENTO:
+                                type: integer
+                              CONCLUIDA:
+                                type: integer
+                              CANCELADA:
+                                type: integer
+                          porPrioridade:
+                            type: object
+                            description: Quantidade por prioridade
+                            properties:
+                              BAIXA:
+                                type: integer
+                              MEDIA:
+                                type: integer
+                              ALTA:
+                                type: integer
+                              URGENTE:
+                                type: integer
+                          vencidas:
+                            type: integer
+                            description: Quantidade de tarefas vencidas
+                          hoje:
+                            type: integer
+                            description: Quantidade de tarefas para hoje
+                          estaSemana:
+                            type: integer
+                            description: Quantidade de tarefas para esta semana
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indica se a operação foi bem sucedida
+        message:
+          type: string
+          description: Mensagem de resposta
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Página atual
+        limit:
+          type: integer
+          description: Limite de registros por página
+        total:
+          type: integer
+          description: Total de registros
+        pages:
+          type: integer
+          description: Total de páginas
+
+    Tarefa:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único da tarefa
+        titulo:
+          type: string
+          description: Título da tarefa
+        descricao:
+          type: string
+          description: Descrição da tarefa
+        status:
+          type: string
+          enum: [PENDENTE, EM_ANDAMENTO, CONCLUIDA, CANCELADA]
+          description: Status da tarefa
+        prioridade:
+          type: string
+          enum: [BAIXA, MEDIA, ALTA, URGENTE]
+          description: Prioridade da tarefa
+        dataVencimento:
+          type: string
+          format: date-time
+          description: Data de vencimento
+        dataConclusao:
+          type: string
+          format: date-time
+          description: Data de conclusão
+        clienteId:
+          type: string
+          description: ID do cliente vinculado
+        usuarioId:
+          type: string
+          description: ID do usuário responsável
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data de atualização
+        cliente:
+          $ref: '#/components/schemas/Cliente'
+          description: Cliente vinculado
+        usuario:
+          $ref: '#/components/schemas/Usuario'
+          description: Usuário responsável
+
+    Cliente:
+      type: object
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        email:
+          type: string
+        telefone:
+          type: string
+
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        email:
+          type: string
+
+    TarefaCreate:
+      type: object
+      required:
+        - titulo
+      properties:
+        titulo:
+          type: string
+          minLength: 5
+          description: Título da tarefa
+        descricao:
+          type: string
+          maxLength: 1000
+          description: Descrição da tarefa
+        status:
+          type: string
+          enum: [PENDENTE, EM_ANDAMENTO, CONCLUIDA, CANCELADA]
+          default: PENDENTE
+          description: Status inicial da tarefa
+        prioridade:
+          type: string
+          enum: [BAIXA, MEDIA, ALTA, URGENTE]
+          default: MEDIA
+          description: Prioridade da tarefa
+        dataVencimento:
+          type: string
+          format: date-time
+          description: Data de vencimento
+        clienteId:
+          type: string
+          description: ID do cliente vinculado
+        usuarioId:
+          type: string
+          description: ID do usuário responsável
+
+    TarefaUpdate:
+      type: object
+      properties:
+        titulo:
+          type: string
+          minLength: 5
+          description: Título da tarefa
+        descricao:
+          type: string
+          maxLength: 1000
+          description: Descrição da tarefa
+        status:
+          type: string
+          enum: [PENDENTE, EM_ANDAMENTO, CONCLUIDA, CANCELADA]
+          description: Status da tarefa
+        prioridade:
+          type: string
+          enum: [BAIXA, MEDIA, ALTA, URGENTE]
+          description: Prioridade da tarefa
+        dataVencimento:
+          type: string
+          format: date-time
+          description: Data de vencimento
+        dataConclusao:
+          type: string
+          format: date-time
+          description: Data de conclusão
+        clienteId:
+          type: string
+          description: ID do cliente vinculado
+        usuarioId:
+          type: string
+          description: ID do usuário responsável
+
+  responses:
+    UnauthorizedError:
+      description: Não autorizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: AUTHENTICATION_ERROR
+                  message:
+                    type: string
+                    example: Token inválido ou expirado
+
+    ValidationError:
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: VALIDATION_ERROR
+                  message:
+                    type: string
+                    example: Dados inválidos
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                          example: titulo
+                        message:
+                          type: string
+                          example: Título deve ter pelo menos 5 caracteres
+
+    NotFoundError:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: NOT_FOUND
+                  message:
+                    type: string
+                    example: Tarefa não encontrada
+
+    UnprocessableEntityError:
+      description: Entidade não processável
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: BUSINESS_RULE_ERROR
+                  message:
+                    type: string
+                    example: Não é possível editar tarefa concluída
+
+    ServerError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: INTERNAL_ERROR
+                  message:
+                    type: string
+                    example: Erro interno do servidor

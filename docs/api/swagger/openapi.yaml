@@ -1,0 +1,1309 @@
+openapi: 3.0.3
+info:
+  title: CRM System API
+  description: |-
+    API completa para o CRM System, incluindo gestão de clientes, tarefas, atividades, email, helpdesk e integração com WhatsApp.
+    
+    Esta API fornece acesso programático a todas as funcionalidades do sistema, seguindo os princípios RESTful com autenticação JWT.
+  version: 1.0.0
+  contact:
+    name: CRM System Support
+    email: api-support@crm-system.com
+    url: https://crm-system.com/docs
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.crm-system.com/v1
+    description: Production server
+  - url: https://staging-api.crm-system.com/v1
+    description: Staging server
+  - url: http://localhost:3000/api
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Health Check
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health Check
+      description: Verifica se a API está funcionando corretamente
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API está saudável
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: 1.0.0
+
+  # Autenticação
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login
+      description: Autentica usuário e retorna tokens de acesso
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: usuario@crm.com
+                password:
+                  type: string
+                  format: password
+                  example: senha123
+      responses:
+        '200':
+          description: Login bem sucedido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      accessToken:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      refreshToken:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # Clientes
+  /customers:
+    get:
+      tags:
+        - Customers
+      summary: Listar Clientes
+      description: Retorna uma lista paginada de clientes
+      operationId: listCustomers
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: status
+          in: query
+          description: Filtro por status do cliente
+          schema:
+            type: string
+            enum: [active, inactive]
+        - name: sortBy
+          in: query
+          description: Campo para ordenação
+          schema:
+            type: string
+            enum: [name, email, createdAt, updatedAt]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          description: Direção da ordenação
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Customers
+      summary: Criar Cliente
+      description: Cria um novo cliente no sistema
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+      responses:
+        '201':
+          description: Cliente criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /customers/{id}:
+    get:
+      tags:
+        - Customers
+      summary: Buscar Cliente
+      description: Retorna os detalhes de um cliente específico
+      operationId: getCustomer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do cliente
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalhes do cliente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Customer'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Customers
+      summary: Atualizar Cliente
+      description: Atualiza os dados de um cliente existente
+      operationId: updateCustomer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do cliente
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+      responses:
+        '200':
+          description: Cliente atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Customers
+      summary: Excluir Cliente
+      description: Exclui um cliente do sistema
+      operationId: deleteCustomer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do cliente
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cliente excluído com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Cliente excluído com sucesso
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # Tarefas
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      summary: Listar Tarefas
+      description: Retorna uma lista paginada de tarefas
+      operationId: listTasks
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: status
+          in: query
+          description: Filtro por status da tarefa
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, cancelled]
+        - name: priority
+          in: query
+          description: Filtro por prioridade
+          schema:
+            type: string
+            enum: [low, medium, high, urgent]
+        - name: assigneeId
+          in: query
+          description: Filtro por responsável
+          schema:
+            type: string
+        - name: dueDateFrom
+          in: query
+          description: Data inicial de vencimento
+          schema:
+            type: string
+            format: date
+        - name: dueDateTo
+          in: query
+          description: Data final de vencimento
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista de tarefas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Tasks
+      summary: Criar Tarefa
+      description: Cria uma nova tarefa no sistema
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Tarefa criada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /tasks/{id}:
+    get:
+      tags:
+        - Tasks
+      summary: Buscar Tarefa
+      description: Retorna os detalhes de uma tarefa específica
+      operationId: getTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da tarefa
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalhes da tarefa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Tasks
+      summary: Atualizar Tarefa
+      description: Atualiza os dados de uma tarefa existente
+      operationId: updateTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da tarefa
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Tarefa atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags:
+        - Tasks
+      summary: Excluir Tarefa
+      description: Exclui uma tarefa do sistema
+      operationId: deleteTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da tarefa
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tarefa excluída com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Tarefa excluída com sucesso
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # Helpdesk
+  /helpdesk/departments:
+    get:
+      tags:
+        - Helpdesk
+      summary: Listar Departamentos
+      description: Retorna uma lista de todos os departamentos
+      operationId: listDepartments
+      responses:
+        '200':
+          description: Lista de departamentos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Department'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Helpdesk
+      summary: Criar Departamento
+      description: Cria um novo departamento no helpdesk
+      operationId: createDepartment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDepartmentRequest'
+      responses:
+        '201':
+          description: Departamento criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Department'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /helpdesk/tickets:
+    get:
+      tags:
+        - Helpdesk
+      summary: Listar Tickets
+      description: Retorna uma lista paginada de tickets do helpdesk
+      operationId: listTickets
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - name: status
+          in: query
+          description: Filtro por status do ticket
+          schema:
+            type: string
+            enum: [open, in_progress, resolved, closed]
+        - name: department
+          in: query
+          description: Filtro por departamento
+          schema:
+            type: string
+        - name: priority
+          in: query
+          description: Filtro por prioridade
+          schema:
+            type: string
+            enum: [low, medium, high, urgent]
+      responses:
+        '200':
+          description: Lista de tickets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HelpdeskTicket'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Helpdesk
+      summary: Criar Ticket
+      description: Cria um novo ticket no helpdesk
+      operationId: createTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTicketRequest'
+      responses:
+        '201':
+          description: Ticket criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/HelpdeskTicket'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # WhatsApp
+  /whatsapp/customers/check:
+    get:
+      tags:
+        - WhatsApp
+      summary: Verificar Cliente
+      description: Verifica se um cliente existe pelo número de telefone
+      operationId: checkCustomerByPhone
+      parameters:
+        - name: phone
+          in: query
+          required: true
+          description: Número de telefone do cliente
+          schema:
+            type: string
+            example: +5511999999999
+      responses:
+        '200':
+          description: Resultado da verificação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  exists:
+                    type: boolean
+                    example: true
+                  data:
+                    oneOf:
+                      - $ref: '#/components/schemas/Customer'
+                      - type: object
+                        nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /whatsapp/customers/create:
+    post:
+      tags:
+        - WhatsApp
+      summary: Criar Cliente via WhatsApp
+      description: Cria um novo cliente a partir de uma conversa do WhatsApp
+      operationId: createCustomerWhatsApp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWhatsAppCustomerRequest'
+      responses:
+        '201':
+          description: Cliente criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /whatsapp/tasks/create:
+    post:
+      tags:
+        - WhatsApp
+      summary: Criar Tarefa via WhatsApp
+      description: Cria uma nova tarefa a partir de uma conversa do WhatsApp
+      operationId: createTaskWhatsApp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWhatsAppTaskRequest'
+      responses:
+        '201':
+          description: Tarefa criada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /whatsapp/helpdesk/create:
+    post:
+      tags:
+        - WhatsApp
+      summary: Criar Ticket via WhatsApp
+      description: Cria um novo ticket de helpdesk a partir de uma conversa do WhatsApp
+      operationId: createTicketWhatsApp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWhatsAppTicketRequest'
+      responses:
+        '201':
+          description: Ticket criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/HelpdeskTicket'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Número da página
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Itens por página
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    SearchParam:
+      name: search
+      in: query
+      description: Termo de busca
+      schema:
+        type: string
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "123"
+        name:
+          type: string
+          example: "João Silva"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@crm.com"
+        role:
+          type: string
+          example: "admin"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "123"
+        name:
+          type: string
+          example: "João Silva"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@email.com"
+        phone:
+          type: string
+          example: "+5511999999999"
+        company:
+          type: string
+          example: "Tech Solutions Ltda"
+        status:
+          type: string
+          enum: [active, inactive]
+          example: "active"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateCustomerRequest:
+      type: object
+      required:
+        - name
+        - phone
+      properties:
+        name:
+          type: string
+          example: "João Silva"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@email.com"
+        phone:
+          type: string
+          example: "+5511999999999"
+        company:
+          type: string
+          example: "Tech Solutions Ltda"
+        status:
+          type: string
+          enum: [active, inactive]
+          default: "active"
+
+    UpdateCustomerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "João Silva"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@email.com"
+        phone:
+          type: string
+          example: "+5511999999999"
+        company:
+          type: string
+          example: "Tech Solutions Ltda"
+        status:
+          type: string
+          enum: [active, inactive]
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "123"
+        title:
+          type: string
+          example: "Follow up inicial"
+        description:
+          type: string
+          example: "Fazer contato inicial com o cliente"
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+          example: "pending"
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          example: "medium"
+        dueDate:
+          type: string
+          format: date-time
+          example: "2024-01-20T18:00:00Z"
+        assigneeId:
+          type: string
+          example: "456"
+        customerId:
+          type: string
+          example: "123"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["importante", "follow-up"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          example: "Follow up inicial"
+        description:
+          type: string
+          example: "Fazer contato inicial com o cliente"
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: "medium"
+        dueDate:
+          type: string
+          format: date-time
+          example: "2024-01-20T18:00:00Z"
+        assigneeId:
+          type: string
+          example: "456"
+        customerId:
+          type: string
+          example: "123"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["importante", "follow-up"]
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Follow up inicial"
+        description:
+          type: string
+          example: "Fazer contato inicial com o cliente"
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        dueDate:
+          type: string
+          format: date-time
+          example: "2024-01-20T18:00:00Z"
+        assigneeId:
+          type: string
+          example: "456"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["importante", "follow-up"]
+
+    Department:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "123"
+        name:
+          type: string
+          example: "TI - Suporte Técnico"
+        description:
+          type: string
+          example: "Suporte técnico e infraestrutura"
+        isRecursive:
+          type: boolean
+          example: true
+        groups:
+          type: array
+          items:
+            type: string
+          example: ["1", "2", "3"]
+        active:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateDepartmentRequest:
+      type: object
+      required:
+        - name
+        - description
+        - groups
+      properties:
+        name:
+          type: string
+          example: "TI - Suporte Técnico"
+        description:
+          type: string
+          example: "Suporte técnico e infraestrutura"
+        isRecursive:
+          type: boolean
+          default: false
+        groups:
+          type: array
+          items:
+            type: string
+          example: ["1", "2", "3"]
+
+    HelpdeskTicket:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "123"
+        title:
+          type: string
+          example: "Problema com acesso ao sistema"
+        description:
+          type: string
+          example: "Usuário não consegue fazer login no sistema"
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+          example: "open"
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          example: "high"
+        department:
+          type: string
+          example: "TI - Suporte Técnico"
+        contactName:
+          type: string
+          example: "João Silva"
+        contactPhone:
+          type: string
+          example: "+5511999999999"
+        assigneeId:
+          type: string
+          example: "456"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["login", "acesso"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTicketRequest:
+      type: object
+      required:
+        - title
+        - description
+        - department
+      properties:
+        title:
+          type: string
+          example: "Problema com acesso ao sistema"
+        description:
+          type: string
+          example: "Usuário não consegue fazer login no sistema"
+        department:
+          type: string
+          example: "TI - Suporte Técnico"
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: "medium"
+        contactName:
+          type: string
+          example: "João Silva"
+        contactPhone:
+          type: string
+          example: "+5511999999999"
+        assigneeId:
+          type: string
+          example: "456"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["login", "acesso"]
+
+    CreateWhatsAppCustomerRequest:
+      type: object
+      required:
+        - name
+        - phone
+      properties:
+        name:
+          type: string
+          example: "João Silva"
+        phone:
+          type: string
+          example: "+5511999999999"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@email.com"
+        company:
+          type: string
+          example: "Tech Solutions Ltda"
+
+    CreateWhatsAppTaskRequest:
+      type: object
+      required:
+        - title
+        - contactName
+        - contactPhone
+      properties:
+        title:
+          type: string
+          example: "Título da tarefa"
+        description:
+          type: string
+          example: "Descrição da tarefa"
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: "medium"
+        dueDate:
+          type: string
+          format: date-time
+          example: "2024-01-20T18:00:00Z"
+        contactName:
+          type: string
+          example: "João Silva"
+        contactPhone:
+          type: string
+          example: "+5511999999999"
+
+    CreateWhatsAppTicketRequest:
+      type: object
+      required:
+        - title
+        - description
+        - department
+        - contactName
+        - contactPhone
+      properties:
+        title:
+          type: string
+          example: "Título do chamado"
+        description:
+          type: string
+          example: "Descrição do problema"
+        department:
+          type: string
+          example: "TI - Suporte Técnico"
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: "medium"
+        contactName:
+          type: string
+          example: "João Silva"
+        contactPhone:
+          type: string
+          example: "+5511999999999"
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 100
+        totalPages:
+          type: integer
+          example: 5
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Descrição do erro"
+        details:
+          type: string
+          example: "Detalhes adicionais do erro"
+        code:
+          type: string
+          example: "ERROR_CODE"
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequestError:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    UnauthorizedError:
+      description: Não autenticado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ForbiddenError:
+      description: Sem permissão
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFoundError:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ValidationError:
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    TooManyRequestsError:
+      description: Muitas requisições
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: System
+    description: Endpoints do sistema
+  - name: Authentication
+    description: Autenticação e autorização
+  - name: Customers
+    description: Gestão de clientes
+  - name: Tasks
+    description: Gestão de tarefas
+  - name: Helpdesk
+    description: Sistema de helpdesk
+  - name: WhatsApp
+    description: Integração com WhatsApp

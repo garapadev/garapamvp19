@@ -1,0 +1,516 @@
+openapi: 3.0.3
+info:
+  title: Sistema CRM - API de Clientes
+  description: API para gerenciamento de clientes no Sistema CRM
+  version: 1.0.0
+  contact:
+    name: Suporte Técnico
+    email: suporte@seu-sistema.com
+
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor de desenvolvimento
+  - url: https://api.seu-sistema.com/api
+    description: Servidor de produção
+
+security:
+  - BearerAuth: []
+
+paths:
+  /clientes:
+    get:
+      tags:
+        - Clientes
+      summary: Listar clientes
+      description: Retorna uma lista paginada de clientes com filtros opcionais
+      parameters:
+        - name: page
+          in: query
+          description: Número da página
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Limite de registros por página
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: search
+          in: query
+          description: Termo de busca (nome, email, telefone, CPF/CNPJ)
+          schema:
+            type: string
+        - name: segmento
+          in: query
+          description: Filtro por segmento
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de clientes retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Cliente'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Clientes
+      summary: Criar cliente
+      description: Cria um novo cliente no sistema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClienteCreate'
+      responses:
+        '201':
+          description: Cliente criado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Cliente'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /clientes/{id}:
+    get:
+      tags:
+        - Clientes
+      summary: Obter cliente
+      description: Retorna os detalhes de um cliente específico
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do cliente
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cliente retornado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Cliente'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags:
+        - Clientes
+      summary: Atualizar cliente
+      description: Atualiza os dados de um cliente existente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do cliente
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClienteUpdate'
+      responses:
+        '200':
+          description: Cliente atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Cliente'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags:
+        - Clientes
+      summary: Excluir cliente
+      description: Exclui um cliente do sistema
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do cliente
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cliente excluído com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /clientes/verificar-telefone:
+    get:
+      tags:
+        - Clientes
+      summary: Verificar telefone
+      description: Verifica se um número de telefone já está cadastrado
+      parameters:
+        - name: telefone
+          in: query
+          required: true
+          description: Número de telefone para verificação
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Verificação realizada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          existe:
+                            type: boolean
+                            description: Indica se o telefone já existe
+                          cliente:
+                            $ref: '#/components/schemas/Cliente'
+                            description: Cliente encontrado (se existir)
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indica se a operação foi bem sucedida
+        message:
+          type: string
+          description: Mensagem de resposta
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Página atual
+        limit:
+          type: integer
+          description: Limite de registros por página
+        total:
+          type: integer
+          description: Total de registros
+        pages:
+          type: integer
+          description: Total de páginas
+
+    Cliente:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único do cliente
+        nome:
+          type: string
+          description: Nome do cliente
+        email:
+          type: string
+          format: email
+          description: Email do cliente
+        telefone:
+          type: string
+          description: Telefone do cliente
+        cpfCnpj:
+          type: string
+          description: CPF ou CNPJ do cliente
+        endereco:
+          type: string
+          description: Endereço do cliente
+        cidade:
+          type: string
+          description: Cidade do cliente
+        estado:
+          type: string
+          description: Estado do cliente
+        cep:
+          type: string
+          description: CEP do cliente
+        avatar:
+          type: string
+          description: URL do avatar do cliente
+        segmento:
+          type: string
+          description: Segmento do cliente
+        observacoes:
+          type: string
+          description: Observações sobre o cliente
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data de atualização
+
+    ClienteCreate:
+      type: object
+      required:
+        - nome
+      properties:
+        nome:
+          type: string
+          minLength: 3
+          description: Nome do cliente
+        email:
+          type: string
+          format: email
+          description: Email do cliente
+        telefone:
+          type: string
+          description: Telefone do cliente
+        cpfCnpj:
+          type: string
+          description: CPF ou CNPJ do cliente
+        endereco:
+          type: string
+          description: Endereço do cliente
+        cidade:
+          type: string
+          description: Cidade do cliente
+        estado:
+          type: string
+          description: Estado do cliente
+        cep:
+          type: string
+          description: CEP do cliente
+        avatar:
+          type: string
+          description: URL do avatar do cliente
+        segmento:
+          type: string
+          description: Segmento do cliente
+        observacoes:
+          type: string
+          description: Observações sobre o cliente
+
+    ClienteUpdate:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 3
+          description: Nome do cliente
+        email:
+          type: string
+          format: email
+          description: Email do cliente
+        telefone:
+          type: string
+          description: Telefone do cliente
+        cpfCnpj:
+          type: string
+          description: CPF ou CNPJ do cliente
+        endereco:
+          type: string
+          description: Endereço do cliente
+        cidade:
+          type: string
+          description: Cidade do cliente
+        estado:
+          type: string
+          description: Estado do cliente
+        cep:
+          type: string
+          description: CEP do cliente
+        avatar:
+          type: string
+          description: URL do avatar do cliente
+        segmento:
+          type: string
+          description: Segmento do cliente
+        observacoes:
+          type: string
+          description: Observações sobre o cliente
+
+  responses:
+    UnauthorizedError:
+      description: Não autorizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: AUTHENTICATION_ERROR
+                  message:
+                    type: string
+                    example: Token inválido ou expirado
+
+    ValidationError:
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: VALIDATION_ERROR
+                  message:
+                    type: string
+                    example: Dados inválidos
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                          example: email
+                        message:
+                          type: string
+                          example: Email inválido
+
+    NotFoundError:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: NOT_FOUND
+                  message:
+                    type: string
+                    example: Cliente não encontrado
+
+    UnprocessableEntityError:
+      description: Entidade não processável
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: DUPLICATE_ENTRY
+                  message:
+                    type: string
+                    example: Email já cadastrado
+
+    ServerError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: INTERNAL_ERROR
+                  message:
+                    type: string
+                    example: Erro interno do servidor

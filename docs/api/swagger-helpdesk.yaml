@@ -1,0 +1,886 @@
+openapi: 3.0.3
+info:
+  title: Sistema CRM - API Helpdesk
+  description: API para gerenciamento de helpdesk e chamados no Sistema CRM
+  version: 1.0.0
+  contact:
+    name: Suporte Técnico
+    email: suporte@seu-sistema.com
+
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor de desenvolvimento
+  - url: https://api.seu-sistema.com/api
+    description: Servidor de produção
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Departamentos
+  /helpdesk/departamentos:
+    get:
+      tags:
+        - Helpdesk - Departamentos
+      summary: Listar departamentos
+      description: Retorna todos os departamentos cadastrados no sistema
+      responses:
+        '200':
+          description: Lista de departamentos retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Departamento'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Helpdesk - Departamentos
+      summary: Criar departamento
+      description: Cria um novo departamento no sistema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartamentoCreate'
+      responses:
+        '201':
+          description: Departamento criado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Departamento'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /helpdesk/departamentos/{id}:
+    get:
+      tags:
+        - Helpdesk - Departamentos
+      summary: Obter departamento
+      description: Retorna os detalhes de um departamento específico
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do departamento
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Departamento retornado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Departamento'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags:
+        - Helpdesk - Departamentos
+      summary: Atualizar departamento
+      description: Atualiza os dados de um departamento existente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do departamento
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartamentoUpdate'
+      responses:
+        '200':
+          description: Departamento atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Departamento'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags:
+        - Helpdesk - Departamentos
+      summary: Excluir departamento
+      description: Exclui um departamento do sistema
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do departamento
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Departamento excluído com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Chamados
+  /helpdesk/chamados:
+    get:
+      tags:
+        - Helpdesk - Chamados
+      summary: Listar chamados
+      description: Retorna uma lista paginada de chamados com filtros opcionais
+      parameters:
+        - name: page
+          in: query
+          description: Número da página
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Limite de registros por página
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: status
+          in: query
+          description: Filtro por status
+          schema:
+            type: string
+            enum: [ABERTO, EM_ANDAMENTO, RESPONDIDO, RESOLVIDO, FECHADO, CANCELADO]
+        - name: departamentoId
+          in: query
+          description: Filtro por departamento
+          schema:
+            type: string
+        - name: clienteId
+          in: query
+          description: Filtro por cliente
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de chamados retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Chamado'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Helpdesk - Chamados
+      summary: Criar chamado
+      description: Cria um novo chamado no sistema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChamadoCreate'
+      responses:
+        '201':
+          description: Chamado criado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Chamado'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /helpdesk/chamados/{id}:
+    get:
+      tags:
+        - Helpdesk - Chamados
+      summary: Obter chamado
+      description: Retorna os detalhes de um chamado específico com respostas
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do chamado
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chamado retornado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ChamadoDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags:
+        - Helpdesk - Chamados
+      summary: Atualizar chamado
+      description: Atualiza os dados de um chamado existente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do chamado
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChamadoUpdate'
+      responses:
+        '200':
+          description: Chamado atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Chamado'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /helpdesk/chamados/{id}/respostas:
+    post:
+      tags:
+        - Helpdesk - Chamados
+      summary: Adicionar resposta
+      description: Adiciona uma resposta a um chamado existente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do chamado
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespostaCreate'
+      responses:
+        '201':
+          description: Resposta adicionada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RespostaChamado'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /helpdesk/dashboard:
+    get:
+      tags:
+        - Helpdesk
+      summary: Dashboard do helpdesk
+      description: Retorna dados para o dashboard do helpdesk
+      responses:
+        '200':
+          description: Dados do dashboard retornados com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalChamados:
+                            type: integer
+                            description: Total de chamados
+                          porStatus:
+                            type: object
+                            description: Quantidade por status
+                            properties:
+                              ABERTO:
+                                type: integer
+                              EM_ANDAMENTO:
+                                type: integer
+                              RESPONDIDO:
+                                type: integer
+                              RESOLVIDO:
+                                type: integer
+                              FECHADO:
+                                type: integer
+                              CANCELADO:
+                                type: integer
+                          porDepartamento:
+                            type: object
+                            description: Quantidade por departamento
+                            additionalProperties:
+                              type: integer
+                          slaAtingido:
+                            type: number
+                            description: Percentual de SLA atingido
+                          tempoMedioResposta:
+                            type: number
+                            description: Tempo médio de resposta em horas
+                          chamadosHoje:
+                            type: integer
+                            description: Chamados abertos hoje
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indica se a operação foi bem sucedida
+        message:
+          type: string
+          description: Mensagem de resposta
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Página atual
+        limit:
+          type: integer
+          description: Limite de registros por página
+        total:
+          type: integer
+          description: Total de registros
+        pages:
+          type: integer
+          description: Total de páginas
+
+    Departamento:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único do departamento
+        nome:
+          type: string
+          description: Nome do departamento
+        descricao:
+          type: string
+          description: Descrição do departamento
+        email:
+          type: string
+          format: email
+          description: Email do departamento
+        ativo:
+          type: boolean
+          description: Indica se o departamento está ativo
+        recursivo:
+          type: boolean
+          description: Indica se o atendimento é recursivo
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data de atualização
+        grupos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Grupo'
+          description: Grupos associados ao departamento
+
+    Grupo:
+      type: object
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        descricao:
+          type: string
+
+    DepartamentoCreate:
+      type: object
+      required:
+        - nome
+      properties:
+        nome:
+          type: string
+          minLength: 3
+          description: Nome do departamento
+        descricao:
+          type: string
+          description: Descrição do departamento
+        email:
+          type: string
+          format: email
+          description: Email do departamento
+        ativo:
+          type: boolean
+          default: true
+          description: Status do departamento
+        recursivo:
+          type: boolean
+          default: false
+          description: Modo recursivo de atendimento
+        grupos:
+          type: array
+          items:
+            type: string
+          description: IDs dos grupos associados
+
+    DepartamentoUpdate:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 3
+          description: Nome do departamento
+        descricao:
+          type: string
+          description: Descrição do departamento
+        email:
+          type: string
+          format: email
+          description: Email do departamento
+        ativo:
+          type: boolean
+          description: Status do departamento
+        recursivo:
+          type: boolean
+          description: Modo recursivo de atendimento
+        grupos:
+          type: array
+          items:
+            type: string
+          description: IDs dos grupos associados
+
+    Chamado:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único do chamado
+        titulo:
+          type: string
+          description: Título do chamado
+        descricao:
+          type: string
+          description: Descrição do chamado
+        status:
+          type: string
+          enum: [ABERTO, EM_ANDAMENTO, RESPONDIDO, RESOLVIDO, FECHADO, CANCELADO]
+          description: Status do chamado
+        prioridade:
+          type: string
+          enum: [BAIXA, MEDIA, ALTA, URGENTE]
+          description: Prioridade do chamado
+        departamentoId:
+          type: string
+          description: ID do departamento responsável
+        clienteId:
+          type: string
+          description: ID do cliente vinculado
+        usuarioId:
+          type: string
+          description: ID do usuário responsável
+        dataResposta:
+          type: string
+          format: date-time
+          description: Data da primeira resposta
+        dataFechamento:
+          type: string
+          format: date-time
+          description: Data de fechamento
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data de atualização
+        departamento:
+          $ref: '#/components/schemas/Departamento'
+          description: Departamento responsável
+        cliente:
+          $ref: '#/components/schemas/Cliente'
+          description: Cliente vinculado
+        usuario:
+          $ref: '#/components/schemas/Usuario'
+          description: Usuário responsável
+
+    ChamadoDetail:
+      allOf:
+        - $ref: '#/components/schemas/Chamado'
+        - type: object
+          properties:
+            respostas:
+              type: array
+              items:
+                $ref: '#/components/schemas/RespostaChamado'
+              description: Respostas do chamado
+
+    Cliente:
+      type: object
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        email:
+          type: string
+        telefone:
+          type: string
+
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        email:
+          type: string
+
+    RespostaChamado:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único da resposta
+        chamadoId:
+          type: string
+          description: ID do chamado
+        mensagem:
+          type: string
+          description: Conteúdo da resposta
+        usuarioId:
+          type: string
+          description: ID do usuário que respondeu
+        anexo:
+          type: string
+          description: URL do anexo
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        usuario:
+          $ref: '#/components/schemas/Usuario'
+          description: Usuário que respondeu
+
+    ChamadoCreate:
+      type: object
+      required:
+        - titulo
+        - descricao
+        - departamentoId
+      properties:
+        titulo:
+          type: string
+          minLength: 5
+          description: Título do chamado
+        descricao:
+          type: string
+          minLength: 10
+          description: Descrição do chamado
+        status:
+          type: string
+          enum: [ABERTO, EM_ANDAMENTO, RESPONDIDO, RESOLVIDO, FECHADO, CANCELADO]
+          default: ABERTO
+          description: Status inicial do chamado
+        prioridade:
+          type: string
+          enum: [BAIXA, MEDIA, ALTA, URGENTE]
+          default: MEDIA
+          description: Prioridade do chamado
+        departamentoId:
+          type: string
+          description: ID do departamento responsável
+        clienteId:
+          type: string
+          description: ID do cliente vinculado
+        usuarioId:
+          type: string
+          description: ID do usuário responsável
+
+    ChamadoUpdate:
+      type: object
+      properties:
+        titulo:
+          type: string
+          minLength: 5
+          description: Título do chamado
+        descricao:
+          type: string
+          minLength: 10
+          description: Descrição do chamado
+        status:
+          type: string
+          enum: [ABERTO, EM_ANDAMENTO, RESPONDIDO, RESOLVIDO, FECHADO, CANCELADO]
+          description: Status do chamado
+        prioridade:
+          type: string
+          enum: [BAIXA, MEDIA, ALTA, URGENTE]
+          description: Prioridade do chamado
+        departamentoId:
+          type: string
+          description: ID do departamento responsável
+        clienteId:
+          type: string
+          description: ID do cliente vinculado
+        usuarioId:
+          type: string
+          description: ID do usuário responsável
+        dataResposta:
+          type: string
+          format: date-time
+          description: Data da primeira resposta
+        dataFechamento:
+          type: string
+          format: date-time
+          description: Data de fechamento
+
+    RespostaCreate:
+      type: object
+      required:
+        - mensagem
+      properties:
+        mensagem:
+          type: string
+          minLength: 1
+          description: Conteúdo da resposta
+        anexo:
+          type: string
+          description: URL do anexo
+
+  responses:
+    UnauthorizedError:
+      description: Não autorizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: AUTHENTICATION_ERROR
+                  message:
+                    type: string
+                    example: Token inválido ou expirado
+
+    ValidationError:
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: VALIDATION_ERROR
+                  message:
+                    type: string
+                    example: Dados inválidos
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                          example: titulo
+                        message:
+                          type: string
+                          example: Título deve ter pelo menos 5 caracteres
+
+    NotFoundError:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: NOT_FOUND
+                  message:
+                    type: string
+                    example: Chamado não encontrado
+
+    UnprocessableEntityError:
+      description: Entidade não processável
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: BUSINESS_RULE_ERROR
+                  message:
+                    type: string
+                    example: Não é possível editar chamado fechado
+
+    ServerError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: INTERNAL_ERROR
+                  message:
+                    type: string
+                    example: Erro interno do servidor

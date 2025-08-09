@@ -1,0 +1,822 @@
+openapi: 3.0.3
+info:
+  title: Sistema CRM - API Email
+  description: API para gerenciamento de email no Sistema CRM
+  version: 1.0.0
+  contact:
+    name: Suporte Técnico
+    email: suporte@seu-sistema.com
+
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor de desenvolvimento
+  - url: https://api.seu-sistema.com/api
+    description: Servidor de produção
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Contas de Email
+  /email/contas:
+    get:
+      tags:
+        - Email - Contas
+      summary: Listar contas
+      description: Retorna todas as contas de email configuradas
+      responses:
+        '200':
+          description: Lista de contas retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ContaEmail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      tags:
+        - Email - Contas
+      summary: Criar conta
+      description: Cria uma nova conta de email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContaEmailCreate'
+      responses:
+        '201':
+          description: Conta criada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ContaEmail'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /email/contas/{id}:
+    get:
+      tags:
+        - Email - Contas
+      summary: Obter conta
+      description: Retorna os detalhes de uma conta de email específica
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da conta
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conta retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ContaEmail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags:
+        - Email - Contas
+      summary: Atualizar conta
+      description: Atualiza os dados de uma conta de email existente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da conta
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContaEmailUpdate'
+      responses:
+        '200':
+          description: Conta atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ContaEmail'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags:
+        - Email - Contas
+      summary: Excluir conta
+      description: Exclui uma conta de email
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da conta
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conta excluída com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /email/contas/{id}/testar:
+    post:
+      tags:
+        - Email - Contas
+      summary: Testar conexão
+      description: Testa a conexão de uma conta de email
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da conta
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Teste realizado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          sucesso:
+                            type: boolean
+                            description: Indica se o teste foi bem sucedido
+                          mensagem:
+                            type: string
+                            description: Mensagem de resultado do teste
+                          detalhes:
+                            type: object
+                            description: Detalhes do teste
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Mensagens
+  /email/mensagens:
+    get:
+      tags:
+        - Email - Mensagens
+      summary: Listar mensagens
+      description: Retorna uma lista paginada de mensagens de email
+      parameters:
+        - name: page
+          in: query
+          description: Número da página
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Limite de registros por página
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: contaId
+          in: query
+          description: Filtro por conta de email
+          schema:
+            type: string
+        - name: pasta
+          in: query
+          description: Filtro por pasta
+          schema:
+            type: string
+            default: INBOX
+        - name: search
+          in: query
+          description: Termo de busca
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de mensagens retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MensagemEmail'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /email/mensagens/{id}:
+    get:
+      tags:
+        - Email - Mensagens
+      summary: Obter mensagem
+      description: Retorna os detalhes de uma mensagem específica
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da mensagem
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mensagem retornada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MensagemEmail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /email/mensagens/{id}/ler:
+    put:
+      tags:
+        - Email - Mensagens
+      summary: Marcar como lida
+      description: Marca uma mensagem como lida
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da mensagem
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mensagem marcada como lida com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /email/mensagens/{id}/importante:
+    put:
+      tags:
+        - Email - Mensagens
+      summary: Marcar como importante
+      description: Marca ou desmarca uma mensagem como importante
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID da mensagem
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - importante
+              properties:
+                importante:
+                  type: boolean
+                  description: Status de importante
+      responses:
+        '200':
+          description: Status atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # Sincronização
+  /email/sincronizar/{contaId}:
+    post:
+      tags:
+        - Email - Sincronização
+      summary: Sincronizar conta
+      description: Inicia sincronização manual de uma conta de email
+      parameters:
+        - name: contaId
+          in: path
+          required: true
+          description: ID da conta
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sincronização iniciada com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          sincronizacaoId:
+                            type: string
+                            description: ID da sincronização
+                          status:
+                            type: string
+                            description: Status da sincronização
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /email/sincronizar/status/{contaId}:
+    get:
+      tags:
+        - Email - Sincronização
+      summary: Status da sincronização
+      description: Verifica o status da sincronização de uma conta
+      parameters:
+        - name: contaId
+          in: path
+          required: true
+          description: ID da conta
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status retornado com sucesso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                            description: Status atual
+                          progresso:
+                            type: number
+                            description: Progresso da sincronização
+                          ultimaSincronizacao:
+                            type: string
+                            format: date-time
+                            description: Data da última sincronização
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indica se a operação foi bem sucedida
+        message:
+          type: string
+          description: Mensagem de resposta
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Página atual
+        limit:
+          type: integer
+          description: Limite de registros por página
+        total:
+          type: integer
+          description: Total de registros
+        pages:
+          type: integer
+          description: Total de páginas
+
+    ContaEmail:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único da conta
+        nome:
+          type: string
+          description: Nome da conta
+        email:
+          type: string
+          format: email
+          description: Email da conta
+        smtpServer:
+          type: string
+          description: Servidor SMTP
+        smtpPort:
+          type: integer
+          description: Porta SMTP
+        smtpUser:
+          type: string
+          description: Usuário SMTP
+        smtpPassword:
+          type: string
+          description: Senha SMTP (criptografada)
+        imapServer:
+          type: string
+          description: Servidor IMAP
+        imapPort:
+          type: integer
+          description: Porta IMAP
+        imapUser:
+          type: string
+          description: Usuário IMAP
+        imapPassword:
+          type: string
+          description: Senha IMAP (criptografada)
+        ativa:
+          type: boolean
+          description: Indica se a conta está ativa
+        ultimaSincronizacao:
+          type: string
+          format: date-time
+          description: Data da última sincronização
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data de atualização
+
+    ContaEmailCreate:
+      type: object
+      required:
+        - nome
+        - email
+        - smtpServer
+        - smtpPort
+        - smtpUser
+        - smtpPassword
+        - imapServer
+        - imapPort
+        - imapUser
+        - imapPassword
+      properties:
+        nome:
+          type: string
+          minLength: 3
+          description: Nome da conta
+        email:
+          type: string
+          format: email
+          description: Email da conta
+        smtpServer:
+          type: string
+          description: Servidor SMTP
+        smtpPort:
+          type: integer
+          minimum: 1
+          maximum: 65535
+          description: Porta SMTP
+        smtpUser:
+          type: string
+          description: Usuário SMTP
+        smtpPassword:
+          type: string
+          minLength: 1
+          description: Senha SMTP
+        imapServer:
+          type: string
+          description: Servidor IMAP
+        imapPort:
+          type: integer
+          minimum: 1
+          maximum: 65535
+          description: Porta IMAP
+        imapUser:
+          type: string
+          description: Usuário IMAP
+        imapPassword:
+          type: string
+          minLength: 1
+          description: Senha IMAP
+        ativa:
+          type: boolean
+          default: true
+          description: Status da conta
+
+    ContaEmailUpdate:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 3
+          description: Nome da conta
+        email:
+          type: string
+          format: email
+          description: Email da conta
+        smtpServer:
+          type: string
+          description: Servidor SMTP
+        smtpPort:
+          type: integer
+          minimum: 1
+          maximum: 65535
+          description: Porta SMTP
+        smtpUser:
+          type: string
+          description: Usuário SMTP
+        smtpPassword:
+          type: string
+          minLength: 1
+          description: Senha SMTP
+        imapServer:
+          type: string
+          description: Servidor IMAP
+        imapPort:
+          type: integer
+          minimum: 1
+          maximum: 65535
+          description: Porta IMAP
+        imapUser:
+          type: string
+          description: Usuário IMAP
+        imapPassword:
+          type: string
+          minLength: 1
+          description: Senha IMAP
+        ativa:
+          type: boolean
+          description: Status da conta
+
+    MensagemEmail:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único da mensagem
+        contaId:
+          type: string
+          description: ID da conta
+        messageId:
+          type: string
+          description: Message ID único
+        assunto:
+          type: string
+          description: Assunto da mensagem
+        conteudo:
+          type: string
+          description: Conteúdo em texto plano
+        htmlConteudo:
+          type: string
+          description: Conteúdo HTML
+        remetente:
+          type: string
+          description: Remetente da mensagem
+        destinatarios:
+          type: string
+          description: Destinatários da mensagem
+        cc:
+          type: string
+          description: Cópia carbono
+        bcc:
+          type: string
+          description: Cópia carbono oculta
+        dataRecebimento:
+          type: string
+          format: date-time
+          description: Data de recebimento
+        dataLeitura:
+          type: string
+          format: date-time
+          description: Data de leitura
+        lida:
+          type: boolean
+          description: Indica se a mensagem foi lida
+        importante:
+          type: boolean
+          description: Indica se a mensagem é importante
+        pasta:
+          type: string
+          description: Pasta da mensagem
+        anexos:
+          type: array
+          items:
+            type: string
+          description: Lista de anexos
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação
+        conta:
+          $ref: '#/components/schemas/ContaEmail'
+          description: Conta associada
+
+  responses:
+    UnauthorizedError:
+      description: Não autorizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: AUTHENTICATION_ERROR
+                  message:
+                    type: string
+                    example: Token inválido ou expirado
+
+    ValidationError:
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: VALIDATION_ERROR
+                  message:
+                    type: string
+                    example: Dados inválidos
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                          example: email
+                        message:
+                          type: string
+                          example: Email inválido
+
+    NotFoundError:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: NOT_FOUND
+                  message:
+                    type: string
+                    example: Conta não encontrada
+
+    UnprocessableEntityError:
+      description: Entidade não processável
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: CONNECTION_ERROR
+                  message:
+                    type: string
+                    example: Falha na conexão com o servidor
+
+    ServerError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: INTERNAL_ERROR
+                  message:
+                    type: string
+                    example: Erro interno do servidor

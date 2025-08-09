@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # PostgreSQL com PostGIS e pgvector
+  postgres:
+    image: garapadev/postgres-postgis-pgvector:15-stable
+    container_name: crm-postgres
+    environment:
+      POSTGRES_DB: crm_db
+      POSTGRES_USER: crm_user
+      POSTGRES_PASSWORD: crm_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - crm-network
+
+  # MongoDB
+  mongodb:
+    image: mongo:7
+    container_name: crm-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: crm_mongo_user
+      MONGO_INITDB_ROOT_PASSWORD: crm_mongo_password
+      MONGO_INITDB_DATABASE: crm_mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - crm-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: crm-redis
+    command: redis-server --requirepass crm_redis_password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - crm-network
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: crm-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: crm_rabbit_user
+      RABBITMQ_DEFAULT_PASS: crm_rabbit_password
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - crm-network
+
+  # PgAdmin para gerenciamento do PostgreSQL (opcional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: crm-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@crm.com
+      PGADMIN_DEFAULT_PASSWORD: admin_password
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    networks:
+      - crm-network
+    profiles:
+      - tools
+
+  # Mongo Express para gerenciamento do MongoDB (opcional)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: crm-mongo-express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: crm_mongo_user
+      ME_CONFIG_MONGODB_ADMINPASSWORD: crm_mongo_password
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin_password
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - crm-network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  crm-network:
+    driver: bridge

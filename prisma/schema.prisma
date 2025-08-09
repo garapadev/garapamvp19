@@ -1,0 +1,334 @@
+// This is your Prisma schema file for CRM System
+// Using Clean Architecture and DDD principles
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// RBAC - Role-Based Access Control
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  resource    String
+  action      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model UserRole {
+  id     String   @id @default(cuid())
+  userId String
+  roleId String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+// Hierarchical Groups for Data Segregation
+model Group {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  parent   Group?      @relation("GroupHierarchy", fields: [parentId], references: [id])
+  children Group[]     @relation("GroupHierarchy")
+  users    UserGroup[]
+  customers Customer[]
+
+  @@map("groups")
+}
+
+model UserGroup {
+  id       String   @id @default(cuid())
+  userId   String
+  groupId  String
+  isActive Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@map("user_groups")
+}
+
+// Core CRM Entities
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String?   @unique
+  password      String
+  name          String?
+  avatar        String?
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  isSuperAdmin  Boolean   @default(false)
+  isGroupAdmin  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userRoles    UserRole[]
+  userGroups   UserGroup[]
+  assignedTasks Task[]    @relation("TaskAssignee")
+  createdTasks Task[]    @relation("TaskCreator")
+  customerNotes CustomerNote[]
+  activityLogs ActivityLog[]
+  createdActivities Activity[]
+  assignedActivityTasks ActivityTask[]
+  activityParticipations ActivityParticipant[]
+
+  @@map("users")
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?  @unique
+  phone       String?
+  document    String?  @unique // CPF/CNPJ
+  company     String?
+  position    String?
+  avatar      String?
+  birthDate   DateTime?
+  address     String?
+  city        String?
+  state       String?
+  country     String?
+  postalCode  String?
+  notes       String?
+  status      CustomerStatus @default(LEAD)
+  source      String?
+  tags        String[]
+  groupId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  group    Group?  @relation(fields: [groupId], references: [id])
+  tasks    Task[]
+  notes    CustomerNote[]
+  activityLogs ActivityLog[]
+  activities Activity[]
+
+  @@map("customers")
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(PENDING)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  assigneeId  String?
+  creatorId   String
+  customerId  String?
+  
+  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creator     User       @relation("TaskCreator", fields: [creatorId], references: [id])
+  customer    Customer?  @relation(fields: [customerId], references: [id])
+  activityLogs ActivityLog[]
+
+  @@map("tasks")
+}
+
+model CustomerNote {
+  id         String   @id @default(cuid())
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  authorId   String
+  customerId String
+  
+  author    User     @relation(fields: [authorId], references: [id])
+  customer  Customer @relation(fields: [customerId], references: [id])
+
+  @@map("customer_notes")
+}
+
+model ActivityLog {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  description String
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+
+  // Relations
+  userId      String?
+  customerId  String?
+  taskId      String?
+  
+  user     User?      @relation(fields: [userId], references: [id])
+  customer Customer?  @relation(fields: [customerId], references: [id])
+  task     Task?      @relation(fields: [taskId], references: [id])
+
+  @@map("activity_logs")
+}
+
+// Activities Menu Models
+model Activity {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  status      ActivityStatus   @default(PLANNING)
+  priority    ActivityPriority @default(MEDIUM)
+  startDate   DateTime?
+  endDate     DateTime?
+  groupId     String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  group       Group?               @relation(fields: [groupId], references: [id])
+  creatorId   String
+  customerId  String?
+  
+  creator     User                @relation(fields: [creatorId], references: [id])
+  customer    Customer?           @relation(fields: [customerId], references: [id])
+  tasks       ActivityTask[]
+  participants ActivityParticipant[]
+
+  @@map("activities")
+}
+
+model ActivityTask {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(PENDING)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  activityId  String
+  assigneeId  String?
+  
+  activity    Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  assignee    User?      @relation(fields: [assigneeId], references: [id])
+
+  @@map("activity_tasks")
+}
+
+model ActivityParticipant {
+  id         String   @id @default(cuid())
+  role       ParticipantRole @default(MEMBER)
+  joinedAt   DateTime @default(now())
+  isActive   Boolean  @default(true)
+
+  // Relations
+  activityId String
+  userId     String
+  
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([activityId, userId])
+  @@map("activity_participants")
+}
+
+// Enums
+enum CustomerStatus {
+  LEAD
+  PROSPECT
+  CUSTOMER
+  INACTIVE
+  LOST
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ActivityType {
+  CUSTOMER_CREATED
+  CUSTOMER_UPDATED
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_COMPLETED
+  NOTE_ADDED
+  LOGIN
+  LOGOUT
+}
+
+enum ActivityStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+enum ActivityPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ParticipantRole {
+  MEMBER
+  MODERATOR
+  ADMIN
+}
