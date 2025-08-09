@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { useLoading } from '@/contexts/LoadingContext'
 import { 
   Home, 
   Users, 
@@ -21,7 +20,6 @@ import {
   MessageSquare,
   FileText,
   Database,
-  Shield,
   Activity,
   Mail,
   HelpCircle,
@@ -99,12 +97,6 @@ const bottomMenuItems = [
     badge: null
   },
   {
-    title: 'Permissões',
-    icon: Shield,
-    href: '/permissions',
-    badge: null
-  },
-  {
     title: 'Sair',
     icon: LogOut,
     href: '/logout',
@@ -115,22 +107,13 @@ const bottomMenuItems = [
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const { setLoading } = useLoading()
 
   const handleNavigation = (href: string) => {
     // Se já estiver na mesma página, não faz nada
     if (pathname === href) return
     
-    // Ativar loading
-    setLoading(true)
-    
-    // Navegar para a nova página
+    // Navegar diretamente para a nova página
     router.push(href)
-    
-    // Desativar loading após um tempo razoável para a navegação
-    setTimeout(() => {
-      setLoading(false)
-    }, 1500)
   }
 
   const MenuItem = ({ item }: { item: any }) => {
