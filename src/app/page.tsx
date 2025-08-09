@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useTenant } from '@/lib/tenant-context'
 import { 
   Users, 
   Building2, 
@@ -27,6 +28,7 @@ import {
 
 export default function CRM() {
   const [searchQuery, setSearchQuery] = useState('')
+  const { tenant } = useTenant()
 
   // Mock user context - simulating a logged-in user belonging to "Filial São Paulo" group
   const mockUserContext = {
@@ -192,10 +194,15 @@ export default function CRM() {
             <div>
               <h1 className="text-3xl font-bold">Dashboard</h1>
               <p className="text-gray-600 mt-2">Bem-vindo ao seu CRM - Acompanhe o desempenho do seu negócio</p>
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 <Badge variant="outline" className="text-xs">
                   Visualizando dados do grupo: Filial São Paulo e hierarquia
                 </Badge>
+                {tenant && (
+                  <Badge variant="secondary" className="text-xs">
+                    Tenant: {tenant.name}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>

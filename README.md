@@ -1,6 +1,6 @@
 # GarapaCRM - Sistema CRM Completo
 
-Um sistema CRM moderno e completo desenvolvido com Next.js 15, TypeScript e arquitetura limpa, oferecendo gestão de clientes, tarefas, atividades e comunicação integrada.
+Um sistema CRM moderno e completo desenvolvido com Next.js 15, TypeScript e arquitetura limpa, oferecendo gestão de clientes, tarefas, atividades e comunicação integrada. **Preparado para multitenancy com arquitetura single tenant atual.**
 
 ## 🚀 Funcionalidades Principais
 
@@ -41,29 +41,125 @@ Um sistema CRM moderno e completo desenvolvido com Next.js 15, TypeScript e arqu
 - **Grupos Hierárquicos**: Organização em estrutura hierárquica com segregação de dados
 - **Gestão de Usuários**: Administração completa de equipe com perfis e permissões
 
-### 📈 Relatórios e Analytics
-- Dashboard com métricas e visualizações em tempo real
-- Relatórios detalhados por grupo e período
-- Análise de desempenho e produtividade
+### 🏢 Arquitetura Multitenant Preparada
+- **Single Tenant Mode**: Operação atual com tenant único
+- **Estrutura Pronta**: Arquitetura preparada para evolução para multitenancy
+- **Isolamento de Dados**: Tenant ID em todas as entidades principais
+- **Context Management**: Sistema de contexto de tenant para fácil escalabilidade
 
-## 🏗️ Arquitetura
+## 🏗️ Arquitetura Multitenant
 
-O projeto segue uma arquitetura limpa com as seguintes camadas:
+### Visão Geral
+O GarapaCRM foi projetado com uma arquitetura que permite fácil evolução de single tenant para multitenant:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Arquitetura Atual (Single Tenant)          │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │   Frontend      │  │   Backend      │  │   Database     │ │
+│  │   (Next.js)     │  │   (API Routes) │  │   (PostgreSQL) │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│           │                     │                     │        │
+│           └─────────────────────┼─────────────────────┘        │
+│                                 │                              │
+│                    ┌─────────────────┐                        │
+│                    │ Tenant Context │                        │
+│                    │ (Default)      │                        │
+│                    └─────────────────┘                        │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│               Arquitetura Futura (Multitenant)               │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │   Frontend      │  │   Backend      │  │   Database     │ │
+│  │   (Next.js)     │  │   (API Routes) │  │   (PostgreSQL) │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
+│           │                     │                     │        │
+│  ┌─────────────────┐           │           ┌─────────────────┐ │
+│  │ Tenant A       │           │           │ Tenant A Data   │ │
+│  │ (tenant-a.com)│           │           │ (tenant_a_*)    │ │
+│  ├─────────────────┤           │           ├─────────────────┤ │
+│  │ Tenant B       │           │           │ Tenant B Data   │ │
+│  │ (tenant-b.com)│           │           │ (tenant_b_*)    │ │
+│  └─────────────────┘           │           └─────────────────┘ │
+│           │                     │                              │
+│           └─────────────────────┼─────────────────────┘        │
+│                                 │                              │
+│                    ┌─────────────────┐                        │
+│                    │ Tenant Context │                        │
+│                    │ (Dynamic)      │                        │
+│                    └─────────────────┘                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Componentes Chave
+
+#### 1. Tenant Context System
+- **`TenantProvider`**: Contexto React para gerenciamento de tenant
+- **`useTenant()`**: Hook para acessar informações do tenant
+- **`getServerTenantId()`**: Função para obter tenant ID no servidor
+- **`createTenantFilter()`**: Utilitário para criar filtros de tenant em queries
+
+#### 2. Middleware de Tenant Detection
+- **`middleware.ts`**: Interceptador de requisições para identificação de tenant
+- **Headers de Debug**: Informações de tenant para desenvolvimento
+- **Preparado para**: Subdomínio, path, header ou cookie-based tenant resolution
+
+#### 3. Banco de Dados com Tenant Isolation
+Todas as entidades principais incluem `tenantId` com valor padrão `"default"`:
+
+```prisma
+model User {
+  id       String   @id @default(cuid())
+  // ... outros campos
+  tenantId String   @default("default") // Tenant isolation
+}
+
+model Customer {
+  id       String   @id @default(cuid())
+  // ... outros campos
+  tenantId String   @default("default") // Tenant isolation
+}
+
+model Task {
+  id       String   @id @default(cuid())
+  // ... outros campos
+  tenantId String   @default("default") // Tenant isolation
+}
+```
+
+#### 4. Repositórios com Tenant Awareness
+- **Tenant Filtering**: Todas as queries incluem filtro de tenant
+- **Segurança**: Dados isolados por tenant automaticamente
+- **Performance**: Índices otimizados para consultas com tenant
+
+#### 5. API Routes com Tenant Context
+- **Automatic Tenant Isolation**: Endpoints API aplicam filtros de tenant
+- **Server-side Tenant ID**: Obtido automaticamente em cada requisição
+- **Consistência**: Garantia de isolamento de dados em todas as operações
+
+### Estrutura de Diretórios
 
 ```
 src/
-├── domain/           # Entidades de domínio e regras de negócio
-│   ├── entities/     # Entidades principais (User, Customer, Task, etc.)
-│   └── enums/        # Enumerações do domínio
-├── application/      # Casos de uso e serviços de aplicação
-│   ├── repositories/ # Interfaces de repositórios
-│   └── services/     # Serviços de aplicação (RBAC, etc.)
-├── infrastructure/   # Implementações de infraestrutura
-│   └── database/     # Repositórios Prisma
-├── presentation/     # UI e páginas
-│   ├── app/          # Páginas Next.js com App Router
-│   └── components/   # Componentes React
-└── lib/              # Utilitários e configurações
+├── lib/
+│   ├── tenant-context.ts      # Tenant management system
+│   ├── db.ts                 # Database connection
+│   └── auth.ts               # Authentication setup
+├── middleware.ts             # Tenant detection middleware
+├── app/
+│   ├── layout.tsx            # Root layout with TenantProvider
+│   ├── page.tsx              # Dashboard with tenant awareness
+│   └── api/                  # API routes with tenant filtering
+├── components/
+│   ├── layout/
+│   │   └── Sidebar.tsx       # UI with tenant information
+│   └── ui/
+└── infrastructure/
+    └── database/
+        └── repositories/      # Tenant-aware repositories
 ```
 
 ## 🛠️ Tecnologias
@@ -84,11 +180,11 @@ src/
 - **Gerenciamento de Estado**: Zustand, TanStack Query
 - **UI Components**: Biblioteca completa de componentes acessíveis
 
-### Comunicação
-- **WebSocket**: Socket.io para comunicação em tempo real
-- **Email**: Sistema integrado de envio de emails
-- **WhatsApp**: Integração via API
-- **Helpdesk**: Sistema de tickets e suporte
+### Multitenancy Infrastructure
+- **Tenant Context**: Sistema de gerenciamento de tenant
+- **Middleware**: Tenant detection e routing
+- **Database Isolation**: Tenant ID em todas as entidades
+- **API Security**: Filtros automáticos de tenant em todas as rotas
 
 ## 📦 Instalação
 
@@ -118,6 +214,8 @@ Configure as seguintes variáveis:
 DATABASE_URL="postgresql://username:password@localhost:5432/garapacrm"
 NEXTAUTH_SECRET="your-secret-key"
 NEXTAUTH_URL="http://localhost:3000"
+# Multitenancy (opcional - futuro)
+# NEXT_PUBLIC_MULTITENANT="true"
 ```
 
 ### 4. Configurar o banco de dados
@@ -133,9 +231,42 @@ npm run dev
 
 A aplicação estará disponível em `http://localhost:3000`
 
+## 🔄 Migração para Multitenant
+
+### Passo 1: Ativar Modo Multitenant
+```env
+NEXT_PUBLIC_MULTITENANT="true"
+```
+
+### Passo 2: Configurar Tenant Resolution
+No `middleware.ts`, implemente a lógica de detecção de tenant:
+
+```typescript
+// Exemplo: Detecção por subdomínio
+const hostname = request.nextUrl.hostname
+const subdomain = hostname.split('.')[0]
+const tenantId = await getTenantBySubdomain(subdomain)
+```
+
+### Passo 3: Atualizar Tenant Provider
+Modifique `tenant-context.ts` para suportar tenants dinâmicos:
+
+```typescript
+// No lugar do tenant fixo, busque dinamicamente
+const tenant = await getCurrentTenant(request)
+```
+
+### Passo 4: Migração de Dados
+```sql
+-- Adicionar tenant_id a registros existentes
+UPDATE users SET tenant_id = 'legacy' WHERE tenant_id = 'default';
+UPDATE customers SET tenant_id = 'legacy' WHERE tenant_id = 'default';
+-- ... para todas as tabelas
+```
+
 ## 🗄️ Estrutura do Banco de Dados
 
-### Schema Principal
+### Schema Principal com Tenant Isolation
 ```prisma
 // RBAC
 model User
@@ -148,7 +279,7 @@ model RolePermission
 model Group
 model UserGroup
 
-// Entidades Principais
+// Entidades Principais (com tenant isolation)
 model Customer
 model Task
 model CustomerNote
@@ -160,33 +291,11 @@ model ActivityTask
 model ActivityParticipant
 ```
 
-## 🔐 Sistema RBAC e Grupos
-
-### Role-Based Access Control
-- **User**: Usuários do sistema
-- **Role**: Papéis (admin, manager, user)
-- **Permission**: Permissões granulares
-- **UserRole**: Associação entre usuários e papéis
-- **RolePermission**: Associação entre papéis e permissões
-
-### Grupos Hierárquicos
-- **Group**: Estrutura hierárquica de organizações
-- **UserGroup**: Associação entre usuários e grupos
-- **Segregação de dados**: Usuários veem apenas dados dos seus grupos e subgrupos
-
-### Exemplos de Permissões
-- `customers:read` - Ler clientes
-- `customers:create` - Criar clientes
-- `tasks:read` - Ler tarefas
-- `tasks:create` - Criar tarefas
-- `activities:read` - Ler atividades
-- `activities:create` - Criar atividades
-
 ## 📱 Módulos Disponíveis
 
 ### Dashboard (`/`)
 - Visão geral do sistema
-- Métricas filtradas por grupo
+- Métricas filtradas por tenant
 - Ações rápidas
 - Atividades recentes
 
@@ -194,7 +303,7 @@ model ActivityParticipant
 - Gestão completa de clientes
 - Cadastro, edição e exclusão
 - Filtros e busca
-- Visualização por grupo
+- Visualização por grupo e tenant
 
 ### Tarefas (`/tasks`)
 - Sistema de gestão de tarefas
@@ -229,7 +338,7 @@ model ActivityParticipant
 - Análise de dados
 - Gráficos e métricas
 - Exportação de relatórios
-- Filtros por período
+- Filtros por período e tenant
 
 ### Configurações (`/settings`)
 - Gestão de usuários
@@ -237,23 +346,13 @@ model ActivityParticipant
 - Configurações do sistema
 - Permissões e acessos
 
-## 🚀 Scripts Disponíveis
-
-```bash
-# Desenvolvimento
-npm run dev          # Iniciar servidor de desenvolvimento
-npm run build        # Compilar para produção
-npm run start        # Iniciar servidor de produção
-npm run lint         # Executar linting
-
-# Banco de dados
-npm run db:push      # Enviar schema para o banco
-npm run db:generate  # Gerar Prisma Client
-npm run db:migrate   # Executar migrações
-npm run db:reset     # Resetar banco de dados
-```
-
 ## 🌟 Recursos Destaque
+
+### Arquitetura Multitenant Escalável
+- **Single Tenant Mode**: Operação simplificada atualmente
+- **Estrutura Preparada**: Pronto para evolução sem refatoração
+- **Isolamento Completo**: Dados, sessões e permissões por tenant
+- **Performance Otimizada**: Queries eficientes com tenant filtering
 
 ### Segregação de Dados por Grupos
 - Usuários acessam apenas dados dos seus grupos
@@ -276,6 +375,22 @@ npm run db:reset     # Resetar banco de dados
 - Validação de dados com Zod
 - Tratamento de erros robusto
 - Documentação automática
+
+## 🚀 Scripts Disponíveis
+
+```bash
+# Desenvolvimento
+npm run dev          # Iniciar servidor de desenvolvimento
+npm run build        # Compilar para produção
+npm run start        # Iniciar servidor de produção
+npm run lint         # Executar linting
+
+# Banco de dados
+npm run db:push      # Enviar schema para o banco
+npm run db:generate  # Gerar Prisma Client
+npm run db:migrate   # Executar migrações
+npm run db:reset     # Resetar banco de dados
+```
 
 ## 🤝 Contribuição
 

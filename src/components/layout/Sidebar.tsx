@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { useTenant } from '@/lib/tenant-context'
 import { 
   Home, 
   Users, 
@@ -24,7 +25,8 @@ import {
   Mail,
   HelpCircle,
   Headphones,
-  MessageCircle
+  MessageCircle,
+  Building2
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -107,6 +109,7 @@ const bottomMenuItems = [
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const { tenant } = useTenant()
 
   const handleNavigation = (href: string) => {
     // Se já estiver na mesma página, não faz nada
@@ -158,7 +161,15 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">CRM</span>
               </div>
-              <span className="font-bold text-lg">GarapaCRM</span>
+              <div>
+                <span className="font-bold text-lg">GarapaCRM</span>
+                {tenant && (
+                  <div className="flex items-center space-x-1">
+                    <Building2 className="h-3 w-3 text-blue-600" />
+                    <span className="text-xs text-gray-500">{tenant.name}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
           {isCollapsed && (
@@ -199,6 +210,11 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               <p className="text-xs text-gray-500 truncate">
                 Administrador
               </p>
+              {tenant && (
+                <Badge variant="outline" className="text-xs mt-1">
+                  {tenant.name}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -243,6 +259,13 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             <AvatarImage src="/placeholder-avatar.jpg" />
             <AvatarFallback>JD</AvatarFallback>
           </Avatar>
+          {tenant && (
+            <div className="mt-2 text-center">
+              <Badge variant="outline" className="text-xs">
+                {tenant.name.substring(0, 8)}
+              </Badge>
+            </div>
+          )}
         </div>
       )}
     </div>

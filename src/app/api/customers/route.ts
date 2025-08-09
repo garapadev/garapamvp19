@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { getServerTenantId, createTenantFilter } from '@/lib/tenant-context'
 
 const prisma = new PrismaClient()
 
@@ -12,8 +13,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
 
     const skip = (page - 1) * limit
+    const tenantFilter = createTenantFilter()
 
-    const where: any = {}
+    const where: any = { ...tenantFilter }
     
     if (search) {
       where.OR = [
@@ -59,6 +61,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    const tenantId = getServerTenantId()
     
     const customer = await prisma.customers.create({
       data: {
@@ -78,7 +81,8 @@ export async function POST(request: NextRequest) {
         notes: body.notes,
         status: body.status || 'LEAD',
         source: body.source,
-        tags: body.tags || []
+        tags: body.tags || [],
+        tenantId
       }
     })
 

@@ -1,13 +1,18 @@
 import { PrismaClient } from '@prisma/client'
 import { Customer, CustomerStatus } from '@/domain/entities/Customer'
 import { CustomerRepository } from '@/application/repositories/CustomerRepository'
+import { getServerTenantId, createTenantFilter } from '@/lib/tenant-context'
 
 export class PrismaCustomerRepository implements CustomerRepository {
   constructor(private prisma: PrismaClient) {}
 
   async findById(id: string): Promise<Customer | null> {
-    const customer = await this.prisma.customers.findUnique({
-      where: { id }
+    const tenantFilter = createTenantFilter()
+    const customer = await this.prisma.customers.findFirst({
+      where: { 
+        id,
+        ...tenantFilter
+      }
     })
 
     if (!customer) return null
@@ -37,8 +42,12 @@ export class PrismaCustomerRepository implements CustomerRepository {
   }
 
   async findByEmail(email: string): Promise<Customer | null> {
-    const customer = await this.prisma.customers.findUnique({
-      where: { email }
+    const tenantFilter = createTenantFilter()
+    const customer = await this.prisma.customers.findFirst({
+      where: { 
+        email,
+        ...tenantFilter
+      }
     })
 
     if (!customer) return null
@@ -68,8 +77,12 @@ export class PrismaCustomerRepository implements CustomerRepository {
   }
 
   async findByDocument(document: string): Promise<Customer | null> {
-    const customer = await this.prisma.customers.findUnique({
-      where: { document }
+    const tenantFilter = createTenantFilter()
+    const customer = await this.prisma.customers.findFirst({
+      where: { 
+        document,
+        ...tenantFilter
+      }
     })
 
     if (!customer) return null
@@ -99,6 +112,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
   }
 
   async create(customer: Customer): Promise<Customer> {
+    const tenantId = getServerTenantId()
     const createdCustomer = await this.prisma.customers.create({
       data: {
         id: customer.id,
@@ -118,7 +132,8 @@ export class PrismaCustomerRepository implements CustomerRepository {
         notes: customer.notes,
         status: customer.status,
         source: customer.source,
-        tags: customer.tags
+        tags: customer.tags,
+        tenantId
       }
     })
 
@@ -126,8 +141,12 @@ export class PrismaCustomerRepository implements CustomerRepository {
   }
 
   async update(customer: Customer): Promise<Customer> {
-    await this.prisma.customers.update({
-      where: { id: customer.id },
+    const tenantFilter = createTenantFilter()
+    await this.prisma.customers.updateMany({
+      where: { 
+        id: customer.id,
+        ...tenantFilter
+      },
       data: {
         name: customer.name,
         email: customer.email,
@@ -153,13 +172,20 @@ export class PrismaCustomerRepository implements CustomerRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await this.prisma.customers.delete({
-      where: { id }
+    const tenantFilter = createTenantFilter()
+    await this.prisma.customers.deleteMany({
+      where: { 
+        id,
+        ...tenantFilter
+      }
     })
   }
 
   async findAll(): Promise<Customer[]> {
-    const customers = await this.prisma.customers.findMany()
+    const tenantFilter = createTenantFilter()
+    const customers = await this.prisma.customers.findMany({
+      where: tenantFilter
+    })
 
     return customers.map(customer => new Customer(
       {
@@ -186,8 +212,12 @@ export class PrismaCustomerRepository implements CustomerRepository {
   }
 
   async findByStatus(status: string): Promise<Customer[]> {
+    const tenantFilter = createTenantFilter()
     const customers = await this.prisma.customers.findMany({
-      where: { status: status as CustomerStatus }
+      where: { 
+        status: status as CustomerStatus,
+        ...tenantFilter
+      }
     })
 
     return customers.map(customer => new Customer(
@@ -215,11 +245,13 @@ export class PrismaCustomerRepository implements CustomerRepository {
   }
 
   async findByTags(tags: string[]): Promise<Customer[]> {
+    const tenantFilter = createTenantFilter()
     const customers = await this.prisma.customers.findMany({
       where: {
         tags: {
           hasSome: tags
-        }
+        },
+        ...tenantFilter
       }
     })
 
@@ -248,6 +280,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
   }
 
   async search(query: string): Promise<Customer[]> {
+    const tenantFilter = createTenantFilter()
     const customers = await this.prisma.customers.findMany({
       where: {
         OR: [
@@ -275,7 +308,8 @@ export class PrismaCustomerRepository implements CustomerRepository {
               mode: 'insensitive'
             }
           }
-        ]
+        ],
+        ...tenantFilter
       }
     })
 
